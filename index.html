@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieRecs Pro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #141414;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 50px 20px;
+            margin: 0;
+        }
+        .container { width: 100%; max-width: 600px; text-align: center; }
+        h1 { color: #e50914; font-size: 3rem; margin-bottom: 10px; letter-spacing: -1px; }
+        p.subtitle { color: #aaa; margin-bottom: 30px; font-size: 1.1rem; }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        input {
+            flex: 1;
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 2px solid #333;
+            outline: none;
+            font-size: 1rem;
+            background: #222;
+            color: white;
+            transition: border 0.3s;
+        }
+        input:focus { border-color: #e50914; }
+        
+        button {
+            padding: 15px 25px;
+            background-color: #e50914;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #b2070f; }
+
+        #status-msg { margin-bottom: 20px; font-style: italic; color: #ff6b6b; }
+        #match-info { margin-bottom: 25px; color: #00d4ff; font-size: 1.2rem; font-weight: 500; }
+
+        .movie-list { text-align: left; }
+        .movie-card {
+            background: #222;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 12px;
+            border: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: slideIn 0.4s ease-out;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .movie-card:hover {
+            transform: scale(1.02);
+            border-color: #e50914;
+        }
+        .movie-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #fff;
+        }
+        .movie-genres {
+            font-size: 0.85rem;
+            color: #aaa;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .genre-tag {
+            background: #333;
+            color: #ddd;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            border: 1px solid #444;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>MovieRecs</h1>
+        <p class="subtitle">Enter any movie to find similar ones!</p>
+
+        <div class="search-box">
+            <input type="text" id="movieInput" placeholder="Try 'Toy Story' or 'Heat'...">
+            <button onclick="searchMovies()">Get Recs</button>
+        </div>
+
+        <div id="status-msg"></div>
+        <div id="match-info"></div>
+        <div id="results" class="movie-list"></div>
+    </div>
+
+    <script>
+        async function searchMovies() {
+            const query = document.getElementById('movieInput').value;
+            const resultsDiv = document.getElementById('results');
+            const statusMsg = document.getElementById('status-msg');
+            const matchInfo = document.getElementById('match-info');
+
+            if (!query) return;
+
+            resultsDiv.innerHTML = '';
+            statusMsg.innerText = 'Analyzing genres...';
+            matchInfo.innerText = '';
+
+            try {
+                const response = await fetch(`/api/recommend?movie=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                statusMsg.innerText = '';
+
+                if (!response.ok) {
+                    statusMsg.innerText = data.error;
+                    return;
+                }
+
+                matchInfo.innerText = `Because you liked: ${data.matched_with}`;
+
+                data.recommendations.forEach(movie => {
+                    const card = document.createElement('div');
+                    card.className = 'movie-card';
+                    
+                    // Split genres into individual tags
+                    const genresHtml = movie.genres.split(', ').map(g => 
+                        `<span class="genre-tag">${g}</span>`
+                    ).join('');
+
+                    card.innerHTML = `
+                        <div class="movie-title">${movie.title}</div>
+                        <div class="movie-genres">${genresHtml}</div>
+                    `;
+                    resultsDiv.appendChild(card);
+                });
+
+            } catch (err) {
+                statusMsg.innerText = 'Error connecting to server.';
+            }
+        }
+
+        document.getElementById('movieInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchMovies();
+        });
+    </script>
+</body>
+</html>
